@@ -226,6 +226,7 @@ input,textarea{font:inherit;color:var(--text)}
   <main class="grid" id="grid">
     <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
   </main>
+  <button class="btn ghost hide" id="more" style="width:100%;margin-top:16px">Показати ще</button>
   <a class="contact" id="contact" target="_blank">Питання? Пишіть менеджеру <b></b></a>
 </div>
 
@@ -338,7 +339,7 @@ function renderChips() {
 }
 $('#chips').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
-  cat = b.dataset.k; haptic('soft'); renderChips(); render();
+  cat = b.dataset.k; haptic('soft'); resetPaging(); renderChips(); render();
   b.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 });
 
@@ -352,15 +353,22 @@ function filtered() {
   return list;
 }
 
+// Показуємо товари порціями — щоб каталог літав навіть на старих телефонах
+const PAGE = 40;
+let shown = PAGE;
+const resetPaging = () => { shown = PAGE; };
 function render() {
-  const list = filtered();
-  $('#count').textContent = list.length + ' ' + plural(list.length, ['товар', 'товари', 'товарів']);
-  if (!list.length) {
+  const all = filtered();
+  $('#count').textContent = all.length + ' ' + plural(all.length, ['товар', 'товари', 'товарів']);
+  if (!all.length) {
     $('#grid').innerHTML = '<div class="empty"><b>🔍</b>Нічого не знайдено</div>';
+    $('#more').classList.add('hide');
     return;
   }
+  const list = all.slice(0, shown);
+  $('#more').classList.toggle('hide', shown >= all.length);
   $('#grid').innerHTML = list.map((p, i) => `
-    <article class="card" data-id="${p.id}" style="animation-delay:${Math.min(i, 12) * 30}ms">
+    <article class="card" data-id="${p.id}" style="animation-delay:${Math.min(i % PAGE, 12) * 30}ms">
       <div class="ph">
         <img data-src="${p.images[0] || ''}" alt="">
         ${!p.inStock ? '<span class="tag out">Під замовлення</span>' : p.isNew ? '<span class="tag">New</span>' : ''}
@@ -384,11 +392,14 @@ $('#grid').addEventListener('click', (e) => {
 });
 
 let qTimer;
-$('#q').addEventListener('input', (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value; render(); }, 150); });
+$('#q').addEventListener('input', (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value; resetPaging(); render(); }, 150); });
+// Доходимо до низу списку — показуємо ще порцію
+new IntersectionObserver((es) => { if (es[0].isIntersecting && !$('#more').classList.contains('hide')) { shown += PAGE; render(); } }, { rootMargin: '600px' }).observe($('#more'));
+$('#more').addEventListener('click', () => { shown += PAGE; render(); });
 const sorts = [['new', '↓ Новинки'], ['cheap', '↑ Дешевші'], ['exp', '↓ Дорожчі']];
 $('#sortBtn').addEventListener('click', () => {
   const i = (sorts.findIndex((s) => s[0] === sort) + 1) % sorts.length;
-  sort = sorts[i][0]; $('#sortBtn').textContent = sorts[i][1]; haptic('soft'); render();
+  sort = sorts[i][0]; $('#sortBtn').textContent = sorts[i][1]; haptic('soft'); resetPaging(); render();
 });
 
 /* ---------- Cart ---------- */
