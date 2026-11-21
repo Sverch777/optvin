@@ -1,0 +1,110 @@
+# Автоперевірка бота OptVin: кожні 30 хвилин дивиться, чи працює сервер.
+# Якщо сервер не відповідає або синхронізація з сайтом оптовика зупинилась —
+# бот пише власнику в Telegram. Коли все знову працює — теж повідомляє.
+name: Перевірка сервера OptVin
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Надіслати тестове повідомлення в Telegram"
+        type: boolean
+        default: true
+
+permissions:
+  actions: write   # щоб GitHub не вимикав перевірку через 60 днів без змін у репозиторії
+
+concurrency: monitor
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HEALTH_URL: https://138-2-128-13.sslip.io/health
+      CHAT_ID: "952491812"
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+    steps:
+      - name: Попередній стан
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: monitor-state-${{ github.run_id }}
+          restore-keys: monitor-state-
+
+      - name: Перевірка
+        run: |
+          send() {
+            curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${CHAT_ID}" --data-urlencode "parse_mode=HTML" \
+              --data-urlencode "text=$1" > /dev/null
+          }
+          mkdir -p state
+          PREV=$(cat state/status 2>/dev/null || echo ok)
+          LAST_ALERT=$(cat state/last_alert 2>/dev/null || echo 0)
+          NOW=$(date +%s)
+
+          if [ -z "$BOT_TOKEN" ]; then echo "Немає секрету BOT_TOKEN"; exit 1; fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.test }}" = "true" ]; then
+            BODY=$(curl -s -m 20 "$HEALTH_URL" || true)
+            send "🧪 <b>Тест автоперевірки OptVin</b>
+          Перевірка працює і напише вам сюди, якщо сервер зупиниться.
+          Стан зараз: <code>${BODY:-сервер не відповів}</code>"
+          fi
+
+          # 3 спроби з паузою — щоб не панікувати через короткий збій мережі
+          BODY=""
+          for i in 1 2 3; do
+            BODY=$(curl -s -m 20 "$HEALTH_URL" || true)
+            echo "$BODY" | grep -q '"ok":true' && break
+            BODY=""; sleep 20
+          done
+
+          STATUS=ok; PROBLEM=""
+          if [ -z "$BODY" ]; then
+            STATUS=down
+            PROBLEM="🚨 <b>Сервер бота OptVin не відповідає!</b>
+          Бот і каталог зараз не працюють.
+
+          <b>Що зробити (2 хв):</b>
+          1. Зайдіть на cloud.oracle.com
+          2. Меню ☰ → Compute → Instances → <b>optvin-bot</b>
+          3. Якщо він зупинений — натисніть <b>Start</b>.
+          Бот запуститься сам через хвилину."
+          else
+            MIN=$(echo "$BODY" | grep -o '"minutesSinceSync":[0-9]*' | cut -d: -f2)
+            if [ -n "$MIN" ] && [ "$MIN" -gt 120 ]; then
+              STATUS=stale
+              PROBLEM="⚠️ <b>Синхронізація з сайтом оптовика не працює вже ${MIN} хв.</b>
+          Бот відповідає, але нові товари та ціни не оновлюються. Можливо, сайт оптовика недоступний або змінився."
+            fi
+          fi
+          echo "Стан: $STATUS (раніше: $PREV) — $BODY"
+
+          if [ "$STATUS" != ok ]; then
+            # Повідомляємо одразу при збої, далі нагадуємо раз на 6 годин
+            if [ "$PREV" = ok ] || [ $((NOW - LAST_ALERT)) -gt 21600 ]; then
+              send "$PROBLEM"; LAST_ALERT=$NOW
+            fi
+          elif [ "$PREV" != ok ]; then
+            send "✅ <b>Бот OptVin знову працює.</b> Сервер відповідає, синхронізація йде."
+          fi
+
+          echo "$STATUS" > state/status
+          echo "$LAST_ALERT" > state/last_alert
+
+      - name: Зберегти стан
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: monitor-state-${{ github.run_id }}
+
+      - name: Не дати GitHub вимкнути перевірку
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/monitor.yml/enable" || true
