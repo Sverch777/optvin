@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>OptVin — каталог</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b12; --bg2:#12121c; --card:#171724; --card2:#1e1e2e; --line:rgba(255,255,255,.07);
+  --text:#f4f4fa; --muted:#9a9ab0; --dim:#6b6b80;
+  --accent:#8b5cf6; --accent2:#3b82f6; --grad:linear-gradient(135deg,#a855f7 0%,#6366f1 50%,#3b82f6 100%);
+  --ok:#22c55e; --warn:#f59e0b; --radius:20px;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --bg:#f4f4f8; --bg2:#ffffff; --card:#ffffff; --card2:#f0f0f6; --line:rgba(15,15,40,.08);
+  --text:#14141f; --muted:#64647a; --dim:#9a9aae; --shadow:0 8px 24px rgba(20,20,60,.08);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{min-height:100vh;padding-bottom:110px;overflow-x:clip;position:relative}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,textarea{font:inherit;color:var(--text)}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+
+/* Header */
+.top{position:relative;padding:18px 0 8px}
+.glow{position:absolute;left:-16px;right:-16px;top:-160px;height:300px;background:radial-gradient(60% 60% at 30% 40%,rgba(139,92,246,.35),transparent 70%),radial-gradient(50% 50% at 80% 30%,rgba(59,130,246,.25),transparent 70%);pointer-events:none;filter:blur(10px)}
+:root[data-theme="light"] .glow{opacity:.5}
+.brand{position:relative;display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;border-radius:14px;background:var(--grad);display:grid;place-items:center;font-weight:800;font-size:17px;letter-spacing:-.5px;color:#fff;box-shadow:0 6px 20px rgba(139,92,246,.45)}
+.brand h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.5px}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px;font-weight:500}
+.cartBtn{margin-left:auto;position:relative;width:46px;height:46px;border-radius:14px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center}
+.badge{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--grad);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;transform:scale(0);transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.badge.on{transform:scale(1)}
+
+.hero{position:relative;margin:16px 0 4px;padding:18px;border-radius:var(--radius);background:var(--grad);color:#fff;overflow:hidden;box-shadow:0 12px 30px rgba(99,102,241,.35)}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.12)}
+.hero::before{content:"";position:absolute;right:40px;bottom:-60px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)}
+.hero b{display:block;font-size:19px;font-weight:800;letter-spacing:-.3px;position:relative;z-index:1}
+.hero span{display:block;margin-top:6px;font-size:13px;opacity:.9;position:relative;z-index:1;line-height:1.45}
+.hero .pills{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;position:relative;z-index:1}
+.hero .pills i{font-style:normal;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.18);backdrop-filter:blur(6px)}
+
+.howto{position:relative;margin-top:12px;padding:14px 16px;border-radius:var(--radius);background:var(--card);border:1px solid var(--line)}
+.howto b{font-size:15px;font-weight:800}
+.howto ol{list-style:none;margin:10px 0 8px;padding:0;display:flex;flex-direction:column;gap:8px}
+.howto li{display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:600}
+.howto li span{flex:none;width:26px;height:26px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+.howto small{color:var(--muted);font-size:13px;font-weight:600}
+.howto .hx{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;color:var(--dim);font-size:15px}
+
+/* Search + chips */
+.sticky{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 75%,transparent);padding:12px 0 6px}
+.search{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.search input{flex:1;border:0;outline:0;background:transparent;font-size:15px;min-width:0}
+.search input::placeholder{color:var(--dim)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;scrollbar-width:none;margin:0 -16px;padding-left:16px;padding-right:16px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:36px;padding:0 14px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;transition:all .2s}
+.chip.on{background:var(--text);color:var(--bg);border-color:transparent}
+.chip small{opacity:.6;margin-left:4px;font-weight:600}
+
+/* Grid */
+.meta{display:flex;justify-content:space-between;align-items:center;margin:10px 2px 10px;color:var(--muted);font-size:13px;font-weight:600}
+.sort{color:var(--muted);font-size:13px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;text-align:left;animation:pop .4s ease both}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card .ph{position:relative;aspect-ratio:1;background:#fff;overflow:hidden}
+.card .ph img{width:100%;height:100%;object-fit:contain;transition:transform .4s}
+.card:active .ph img{transform:scale(.97)}
+.tag{position:absolute;top:10px;left:10px;padding:4px 8px;border-radius:8px;font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#fff;background:var(--grad)}
+.tag.out{background:#3a3a4a}
+.card .info{padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card .t{font-size:13px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:35px}
+.card .row{margin-top:auto;display:flex;align-items:center;justify-content:space-between}
+.price{font-weight:800;font-size:16px;letter-spacing:-.3px}
+.add{width:34px;height:34px;border-radius:11px;background:var(--grad);color:#fff;display:grid;place-items:center;box-shadow:0 4px 12px rgba(139,92,246,.4);transition:transform .15s}
+.add:active{transform:scale(.88)}
+.add.in{background:var(--ok);box-shadow:0 4px 12px rgba(34,197,94,.35)}
+
+.skeleton{border-radius:var(--radius);background:linear-gradient(90deg,var(--card) 0%,var(--card2) 50%,var(--card) 100%);background-size:200% 100%;animation:sh 1.2s infinite;aspect-ratio:.72}
+@keyframes sh{to{background-position:-200% 0}}
+.empty{grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--muted)}
+.empty b{display:block;font-size:40px;margin-bottom:10px}
+
+/* Floating cart bar */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px calc(12px + env(safe-area-inset-bottom));transform:translateY(130%);transition:transform .35s cubic-bezier(.2,.9,.3,1)}
+.bar.on{transform:none}
+.bar button{width:100%;max-width:688px;margin:0 auto;height:58px;border-radius:18px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-weight:800;font-size:16px;box-shadow:0 12px 30px rgba(99,102,241,.5)}
+.bar button span{display:flex;align-items:center;gap:10px}
+.bar .cnt{background:rgba(255,255,255,.22);border-radius:9px;padding:3px 9px;font-size:13px}
+
+/* Sheets */
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .3s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;max-height:92vh;overflow-y:auto;background:var(--bg2);border-radius:28px 28px 0 0;transform:translateY(105%);transition:transform .4s cubic-bezier(.2,.9,.3,1);padding-bottom:calc(110px + env(safe-area-inset-bottom));max-width:720px;margin:0 auto;overscroll-behavior:contain}
+.sheet.on{transform:none}
+.grab{position:sticky;top:0;z-index:3;display:flex;justify-content:center;padding:10px 0 6px;background:linear-gradient(var(--bg2) 60%,transparent)}
+.grab i{width:40px;height:5px;border-radius:3px;background:var(--line);background:rgba(128,128,150,.35)}
+.close{position:absolute;right:14px;top:12px;z-index:4;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;font-size:18px}
+
+.gal{position:relative;margin:0 16px;border-radius:22px;overflow:hidden;background:#fff}
+.gal .track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.gal .track::-webkit-scrollbar{display:none}
+.gal img{flex:none;width:100%;aspect-ratio:1;object-fit:contain;scroll-snap-align:center}
+.dots{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px}
+.dots i{width:6px;height:6px;border-radius:3px;background:rgba(0,0,0,.2);transition:all .25s}
+.dots i.on{width:18px;background:#6366f1}
+.pd{padding:18px 20px 0}
+.pd .cat{color:var(--accent);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+.pd h2{margin:6px 0 12px;font-size:20px;line-height:1.3;font-weight:800;letter-spacing:-.3px}
+.pd .pr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pd .pr .price{font-size:28px}
+.stock{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:rgba(34,197,94,.14);color:var(--ok)}
+.stock.no{background:rgba(245,158,11,.14);color:var(--warn)}
+.specs{margin:18px 0 0;padding:6px 16px;background:var(--card);border:1px solid var(--line);border-radius:18px}
+.specs h3{margin:10px 0 6px;font-size:14px;font-weight:800}
+.spec{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px}
+.spec:first-of-type{border-top:0}
+.spec span:first-child{color:var(--muted)}
+.spec span:last-child{text-align:right;font-weight:600}
+.spec.full span{color:var(--text)!important;text-align:left}
+.perks{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+.perk{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;font-size:12px;color:var(--muted);line-height:1.4}
+.perk b{display:block;color:var(--text);font-size:13px;margin-bottom:2px}
+
+.actions{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg2) 35%);display:none;gap:10px;max-width:720px;margin:0 auto}
+.actions.on{display:flex}
+.qty{display:flex;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;height:56px}
+.qty button{width:44px;height:100%;font-size:22px;font-weight:600;color:var(--muted)}
+.qty b{min-width:26px;text-align:center;font-size:16px}
+.btn{flex:1;height:56px;border-radius:16px;background:var(--grad);color:#fff;font-weight:800;font-size:16px;box-shadow:0 10px 26px rgba(99,102,241,.45)}
+.btn:disabled{opacity:.5}
+.btn.ghost{background:var(--card);color:var(--text);box-shadow:none;border:1px solid var(--line)}
+
+/* Cart */
+.ch{padding:4px 20px 0}
+.ch h2{margin:4px 0 14px;font-size:22px;font-weight:800}
+.ci{display:flex;gap:12px;align-items:center;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin-bottom:10px}
+.ci img{width:64px;height:64px;border-radius:12px;object-fit:contain;background:#fff;flex:none}
+.ci .x{flex:1;min-width:0}
+.ci .x div{font-size:13px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ci .x b{display:block;margin-top:4px;font-size:15px}
+.ci .qty{height:38px;border-radius:12px}
+.ci .qty button{width:32px;font-size:18px}
+.ci .qty b{min-width:20px;font-size:14px}
+.sum{display:flex;justify-content:space-between;align-items:center;padding:16px 4px;font-size:15px;color:var(--muted);font-weight:600}
+.sum b{font-size:24px;color:var(--text);font-weight:800}
+.form{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.form h3{margin:12px 0 2px;font-size:15px;font-weight:800}
+.field{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 14px}
+.field label{display:block;font-size:11px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field textarea{width:100%;border:0;outline:0;background:transparent;font-size:15px;padding:4px 0 2px;resize:none}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{padding:12px;border-radius:14px;background:var(--card);border:1.5px solid var(--line);text-align:left;font-size:13px;color:var(--muted);line-height:1.35}
+.seg button b{display:block;color:var(--text);font-size:14px;margin-bottom:2px}
+.seg button.on{border-color:var(--accent);background:rgba(139,92,246,.1)}
+.hide{display:none!important}
+.form h3 small{font-weight:600;color:var(--dim);font-size:12px}
+.who{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:16px}
+.who .ava{width:40px;height:40px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:none}
+.who .ava img{width:100%;height:100%;object-fit:cover}
+.who small{display:block;font-size:11px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.who b{font-size:15px}
+.tgok{margin-left:auto;font-size:11px;font-weight:800;color:#2aabee;background:rgba(42,171,238,.12);padding:5px 9px;border-radius:999px}
+
+.done{text-align:center;padding:30px 24px 10px}
+.done .ok{width:84px;height:84px;margin:10px auto 18px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-size:40px;color:#fff;box-shadow:0 14px 34px rgba(99,102,241,.5);animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+.done h2{margin:0 0 8px;font-size:22px}
+.done p{margin:0;color:var(--muted);line-height:1.5}
+
+.toast{position:fixed;left:50%;top:16px;z-index:100;transform:translate(-50%,-150%);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:14px;font-weight:700;transition:transform .35s cubic-bezier(.2,.9,.3,1);box-shadow:var(--shadow);max-width:90vw}
+.toast.on{transform:translate(-50%,0)}
+.contact{display:block;text-align:center;margin:22px 0 0;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
+.contact b{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="glow"></div>
+    <div class="brand">
+      <div class="logo">OV</div>
+      <div>
+        <h1 id="shopName">OptVin</h1>
+        <p>Електроніка та гаджети</p>
+      </div>
+      <button class="cartBtn" id="cartBtn" aria-label="Кошик">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="badge" id="badge">0</span>
+      </button>
+    </div>
+    <div class="hero">
+      <b>Нові гаджети щотижня ⚡</b>
+      <span>Колонки, фени, ліхтарі, годинники та ще сотні товарів за вигідними цінами</span>
+      <div class="pills"><i>🚚 Нова Пошта</i><i>🤝 Зустріч у Вінниці</i></div>
+    </div>
+    <div class="howto" id="howto">
+      <button class="hx" id="howtoClose" aria-label="Закрити">✕</button>
+      <b>Як замовити</b>
+      <ol>
+        <li><span>1</span>Натисніть на товар</li>
+        <li><span>2</span>«Додати в кошик»</li>
+        <li><span>3</span>Внизу «Кошик» → «Замовити»</li>
+      </ol>
+      <small>Менеджер сам напише вам у Telegram 💬</small>
+    </div>
+  </header>
+
+  <div class="sticky">
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:var(--dim)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Пошук: колонка, фен, ліхтар…" autocomplete="off">
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="meta"><span id="count"></span><button class="sort" id="sortBtn">↓ Новинки</button></div>
+  <main class="grid" id="grid">
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </main>
+  <a class="contact" id="contact" target="_blank">Питання? Пишіть менеджеру <b></b></a>
+</div>
+
+<div class="bar" id="bar"><button id="barBtn"><span>Кошик <i class="cnt" id="barCnt">0</i></span><span id="barSum">0 грн</span></button></div>
+
+<div class="scrim" id="scrim"></div>
+
+<section class="sheet" id="pSheet">
+  <div class="grab"><i></i></div>
+  <button class="close" data-close>✕</button>
+  <div id="pBody"></div>
+</section>
+<div class="actions" id="pActions">
+  <div class="qty"><button id="pMinus">−</button><b id="pQty">1</b><button id="pPlus">+</button></div>
+  <button class="btn" id="pAdd">Додати в кошик</button>
+</div>
+
+<section class="sheet" id="cSheet">
+  <div class="grab"><i></i></div>
+  <div class="ch" id="cBody"></div>
+</section>
+<div class="actions" id="cActions"><button class="btn" id="cSubmit">Замовити</button></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+const inTg = !!(tg && tg.initData);
+const $ = (s) => document.querySelector(s);
+const fmt = (n) => Number(n).toLocaleString('uk-UA').replace(/ /g, ' ') + ' грн';
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const haptic = (t = 'light') => { try { tg?.HapticFeedback?.impactOccurred(t); } catch {} };
+
+/* ---------- Звідки брати дані ----------
+   Сторінка може лежати на GitHub Pages, а товари/фото/замовлення — на комп'ютері з ботом.
+   Адресу сервера бот передає в посиланні: ?api=https://… */
+const NG = { 'ngrok-skip-browser-warning': '1' }; // щоб ngrok не показував сторінку-попередження
+let API = new URLSearchParams(location.search).get('api') || '';
+try {
+  if (API) localStorage.setItem('optvin_api', API);
+  else if (location.hostname.endsWith('github.io')) API = localStorage.getItem('optvin_api') || '';
+} catch {}
+if (API && !API.endsWith('/')) API += '/';
+
+/* Фото вантажимо через fetch (із тим самим заголовком), лише коли вони з'являються на екрані */
+const imgCache = new Map();
+async function loadImg(img) {
+  const src = img.dataset.src;
+  if (!src) return;
+  const url = /^https?:/.test(src) ? src : API + src.replace(/^\//, '');
+  try {
+    let p = imgCache.get(url);
+    if (!p) {
+      p = fetch(url, { headers: NG }).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then((b) => URL.createObjectURL(b));
+      imgCache.set(url, p);
+    }
+    img.src = await p;
+  } catch { imgCache.delete(url); }
+}
+const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+  if (e.isIntersecting) { io.unobserve(e.target); loadImg(e.target); }
+}), { rootMargin: '400px' });
+new MutationObserver(() => {
+  document.querySelectorAll('img[data-src]:not([data-obs])').forEach((i) => { i.dataset.obs = '1'; io.observe(i); });
+}).observe(document.documentElement, { childList: true, subtree: true });
+
+if (tg) {
+  tg.ready(); tg.expand();
+  const light = inTg && tg.colorScheme === 'light';
+  if (light) document.documentElement.dataset.theme = 'light';
+  try { tg.setHeaderColor(light ? '#f4f4f8' : '#0b0b12'); tg.setBackgroundColor(light ? '#f4f4f8' : '#0b0b12'); } catch {}
+}
+
+let DATA = { products: [], categories: [] };
+let cat = 'all', query = '', sort = 'new';
+let cart = {};
+try { cart = JSON.parse(localStorage.getItem('optvin_cart') || '{}'); } catch {}
+const saveCart = () => { try { localStorage.setItem('optvin_cart', JSON.stringify(cart)); } catch {} };
+const byId = (id) => DATA.products.find((p) => p.id === id);
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+async function load() {
+  try {
+    const r = await fetch(API + 'api/products', { headers: NG });
+    DATA = await r.json();
+  } catch (e) {
+    $('#grid').innerHTML = '<div class="empty"><b>📡</b>Не вдалося завантажити каталог.<br>Спробуйте ще раз.</div>';
+    return;
+  }
+  $('#shopName').textContent = DATA.shop;
+  const c = $('#contact'); c.href = 'https://t.me/' + DATA.manager; c.querySelector('b').textContent = '@' + DATA.manager;
+  // прибираємо з кошика товари, яких більше немає
+  for (const id of Object.keys(cart)) if (!byId(id)) delete cart[id];
+  renderChips(); render(); updateCart();
+  const open = new URLSearchParams(location.search).get('p') || tg?.initDataUnsafe?.start_param;
+  if (open && byId(open)) openProduct(open);
+}
+
+function renderChips() {
+  const news = DATA.products.filter((p) => p.isNew).length;
+  const chips = [{ k: 'all', n: 'Усі', c: DATA.products.length }];
+  if (news) chips.push({ k: 'new', n: '🆕 Новинки', c: news });
+  for (const x of DATA.categories) chips.push({ k: x.name, n: x.name, c: x.count });
+  $('#chips').innerHTML = chips.map((x) =>
+    `<button class="chip ${x.k === cat ? 'on' : ''}" data-k="${esc(x.k)}">${esc(x.n)}<small>${x.c}</small></button>`).join('');
+}
+$('#chips').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  cat = b.dataset.k; haptic('soft'); renderChips(); render();
+  b.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+});
+
+function filtered() {
+  const q = query.toLowerCase().trim();
+  let list = DATA.products.filter((p) =>
+    (cat === 'all' || (cat === 'new' ? p.isNew : p.category === cat)) &&
+    (!q || (p.title + ' ' + p.category).toLowerCase().includes(q)));
+  if (sort === 'cheap') list = [...list].sort((a, b) => a.price - b.price);
+  if (sort === 'exp') list = [...list].sort((a, b) => b.price - a.price);
+  return list;
+}
+
+function render() {
+  const list = filtered();
+  $('#count').textContent = list.length + ' ' + plural(list.length, ['товар', 'товари', 'товарів']);
+  if (!list.length) {
+    $('#grid').innerHTML = '<div class="empty"><b>🔍</b>Нічого не знайдено</div>';
+    return;
+  }
+  $('#grid').innerHTML = list.map((p, i) => `
+    <article class="card" data-id="${p.id}" style="animation-delay:${Math.min(i, 12) * 30}ms">
+      <div class="ph">
+        <img data-src="${p.images[0] || ''}" alt="">
+        ${!p.inStock ? '<span class="tag out">Під замовлення</span>' : p.isNew ? '<span class="tag">New</span>' : ''}
+      </div>
+      <div class="info">
+        <div class="t">${esc(p.title)}</div>
+        <div class="row">
+          <span class="price">${fmt(p.price)}</span>
+          <button class="add ${cart[p.id] ? 'in' : ''}" data-add="${p.id}" aria-label="В кошик">${cart[p.id] ? '✓' : plusSvg}</button>
+        </div>
+      </div>
+    </article>`).join('');
+}
+const plusSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+const plural = (n, f) => f[(n % 10 === 1 && n % 100 !== 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 1 : 2];
+
+$('#grid').addEventListener('click', (e) => {
+  const add = e.target.closest('[data-add]');
+  if (add) { e.stopPropagation(); addToCart(add.dataset.add, 1); return; }
+  const card = e.target.closest('.card'); if (card) openProduct(card.dataset.id);
+});
+
+let qTimer;
+$('#q').addEventListener('input', (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value; render(); }, 150); });
+const sorts = [['new', '↓ Новинки'], ['cheap', '↑ Дешевші'], ['exp', '↓ Дорожчі']];
+$('#sortBtn').addEventListener('click', () => {
+  const i = (sorts.findIndex((s) => s[0] === sort) + 1) % sorts.length;
+  sort = sorts[i][0]; $('#sortBtn').textContent = sorts[i][1]; haptic('soft'); render();
+});
+
+/* ---------- Cart ---------- */
+function addToCart(id, qty) {
+  cart[id] = (cart[id] || 0) + qty; saveCart(); haptic('medium');
+  try { tg?.HapticFeedback?.notificationOccurred('success'); } catch {}
+  toast('Додано в кошик ✓'); updateCart(); render();
+}
+function updateCart() {
+  const ids = Object.keys(cart);
+  const n = ids.reduce((s, id) => s + cart[id], 0);
+  const sum = ids.reduce((s, id) => s + (byId(id)?.price || 0) * cart[id], 0);
+  $('#badge').textContent = n; $('#badge').classList.toggle('on', n > 0);
+  $('#barCnt').textContent = n; $('#barSum').textContent = fmt(sum);
+  $('#bar').classList.toggle('on', n > 0 && !openSheet);
+  return { n, sum };
+}
+
+/* ---------- Sheets ---------- */
+let openSheet = null;
+function show(sheet, actions) {
+  openSheet = sheet;
+  $('#scrim').classList.add('on'); sheet.classList.add('on'); sheet.scrollTop = 0;
+  actions && actions.classList.add('on');
+  $('#bar').classList.remove('on');
+  document.body.style.overflow = 'hidden';
+  tg?.BackButton?.show();
+}
+function hide() {
+  document.querySelectorAll('.sheet,.actions').forEach((x) => x.classList.remove('on'));
+  $('#scrim').classList.remove('on'); openSheet = null;
+  document.body.style.overflow = '';
+  tg?.BackButton?.hide(); updateCart();
+}
+$('#scrim').addEventListener('click', hide);
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', hide));
+tg?.BackButton?.onClick(hide);
+
+// свайп униз, щоб закрити
+document.querySelectorAll('.sheet').forEach((s) => {
+  let y0 = null;
+  s.addEventListener('touchstart', (e) => { y0 = s.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
+  s.addEventListener('touchmove', (e) => {
+    if (y0 === null) return; const d = e.touches[0].clientY - y0;
+    if (d > 0) s.style.transform = `translateY(${d}px)`;
+  }, { passive: true });
+  s.addEventListener('touchend', (e) => {
+    if (y0 === null) return; const d = e.changedTouches[0].clientY - y0;
+    s.style.transform = ''; y0 = null; if (d > 110) hide();
+  });
+});
+
+let pId = null, pQty = 1;
+function openProduct(id) {
+  const p = byId(id); if (!p) return;
+  pId = id; pQty = 1; $('#pQty').textContent = 1;
+  const specs = p.description.map((l) => {
+    const m = l.match(/^([^:]{2,60}):\s*(.+)$/);
+    return m ? `<div class="spec"><span>${esc(m[1])}</span><span>${esc(m[2])}</span></div>`
+             : `<div class="spec full"><span>${esc(l)}</span></div>`;
+  }).join('');
+  $('#pBody').innerHTML = `
+    <div class="gal">
+      <div class="track" id="track">${p.images.map((s) => `<img data-src="${s}" alt="">`).join('')}</div>
+      ${p.images.length > 1 ? `<div class="dots" id="dots">${p.images.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
+    </div>
+    <div class="pd">
+      <div class="cat">${esc(p.category)}</div>
+      <h2>${esc(p.title)}</h2>
+      <div class="pr"><span class="price">${fmt(p.price)}</span>
+        <span class="stock ${p.inStock ? '' : 'no'}">${p.inStock ? '● В наявності' : '● Під замовлення'}</span></div>
+      <div class="perks">
+        <div class="perk"><b>🚚 Нова Пошта</b>Відправка по всій Україні</div>
+        <div class="perk"><b>🤝 Вінниця</b>Зустріч у місті</div>
+      </div>
+      ${specs ? `<div class="specs"><h3>Характеристики</h3>${specs}</div>` : ''}
+    </div>`;
+  const track = $('#track'), dots = $('#dots');
+  if (dots) track.addEventListener('scroll', () => {
+    const i = Math.round(track.scrollLeft / track.clientWidth);
+    dots.querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === i));
+  }, { passive: true });
+  show($('#pSheet'), $('#pActions'));
+}
+$('#pMinus').onclick = () => { pQty = Math.max(1, pQty - 1); $('#pQty').textContent = pQty; haptic('soft'); };
+$('#pPlus').onclick = () => { pQty = Math.min(99, pQty + 1); $('#pQty').textContent = pQty; haptic('soft'); };
+$('#pAdd').onclick = () => { addToCart(pId, pQty); hide(); };
+
+/* ---------- Checkout ---------- */
+
+let form = { delivery: 'np', address: '', comment: '' };
+try { form.address = localStorage.getItem('optvin_addr') || ''; } catch {}
+const tgUser = tg?.initDataUnsafe?.user || null;
+const userLabel = () => tgUser ? (tgUser.username ? '@' + tgUser.username : [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ')) : 'Гість';
+
+function openCart() {
+  const ids = Object.keys(cart);
+  if (!ids.length) { toast('Кошик порожній'); return; }
+  renderCart(); show($('#cSheet'), $('#cActions'));
+}
+function renderCart() {
+  const ids = Object.keys(cart);
+  if (!ids.length) { hide(); return; }
+  const { sum } = updateCart();
+  $('#cBody').innerHTML = `
+    <h2>Кошик</h2>
+    ${ids.map((id) => { const p = byId(id); return `
+      <div class="ci">
+        <img data-src="${p.images[0] || ''}" alt="">
+        <div class="x"><div>${esc(p.title)}</div><b>${fmt(p.price * cart[id])}</b></div>
+        <div class="qty"><button data-dec="${id}">−</button><b>${cart[id]}</b><button data-inc="${id}">+</button></div>
+      </div>`; }).join('')}
+    <div class="sum"><span>Разом</span><b>${fmt(sum)}</b></div>
+    <div class="form">
+      <div class="who">
+        <div class="ava">${tgUser?.photo_url ? `<img src="${esc(tgUser.photo_url)}" alt="">` : esc((userLabel().replace('@', '')[0] || '?').toUpperCase())}</div>
+        <div><small>Замовлення від</small><b>${esc(userLabel())}</b></div>
+        ${tgUser ? '<span class="tgok">✓ Telegram</span>' : ''}
+      </div>
+      <h3>Доставка <small>(можна вказати пізніше в чаті)</small></h3>
+      <div class="seg">
+        <button data-del="np" class="${form.delivery === 'np' ? 'on' : ''}"><b>🚚 Нова Пошта</b>По всій Україні</button>
+        <button data-del="meet" class="${form.delivery === 'meet' ? 'on' : ''}"><b>🤝 Зустріч</b>У Вінниці</button>
+      </div>
+      <div class="field ${form.delivery === 'np' ? '' : 'hide'}"><label>Куди відправити</label><textarea id="fAddress" rows="2" placeholder="Місто, відділення, ПІБ, телефон">${esc(form.address)}</textarea></div>
+      <div class="field"><label>Коментар</label><textarea id="fComment" rows="2" placeholder="Колір, побажання…">${esc(form.comment)}</textarea></div>
+      <div class="perk" style="margin-top:4px"><b>💬 Як це працює</b>Натисніть «Замовити» — менеджер напише вам в особисті повідомлення, щоб узгодити деталі та оплату.</div>
+    </div>`;
+}
+const readForm = () => {
+  const c = $('#fComment'), a = $('#fAddress');
+  if (c) form.comment = c.value.trim();
+  if (a) { form.address = a.value.trim(); try { localStorage.setItem('optvin_addr', form.address); } catch {} }
+};
+$('#cBody').addEventListener('click', (e) => {
+  const inc = e.target.closest('[data-inc]'), dec = e.target.closest('[data-dec]'), del = e.target.closest('[data-del]');
+  if (!inc && !dec && !del) return;
+  readForm(); haptic('soft');
+  if (inc) cart[inc.dataset.inc] = Math.min(99, cart[inc.dataset.inc] + 1);
+  if (dec) { const id = dec.dataset.dec; cart[id]--; if (cart[id] <= 0) delete cart[id]; }
+  if (del) form.delivery = del.dataset.del;
+  saveCart(); render(); renderCart();
+});
+$('#cartBtn').onclick = openCart;
+$('#barBtn').onclick = openCart;
+
+$('#cSubmit').onclick = async () => {
+  readForm();
+  if (!inTg) return toast('Відкрийте каталог через бота в Telegram');
+  const btn = $('#cSubmit'); btn.disabled = true; btn.textContent = 'Надсилаємо…';
+  try {
+    const r = await fetch(API + 'api/order', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+      body: JSON.stringify({
+        initData: tg.initData,
+        items: Object.keys(cart).map((id) => ({ id, qty: cart[id] })),
+        delivery: form.delivery === 'np' ? ('Нова Пошта' + (form.address ? ': ' + form.address : ' (адресу не вказано)')) : 'Зустріч у Вінниці',
+        comment: form.comment,
+      }),
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || 'Помилка');
+    cart = {}; saveCart(); render(); updateCart(); try { localStorage.setItem('optvin_howto', 'hide'); } catch {} $('#howto')?.remove();
+    try { tg.HapticFeedback.notificationOccurred('success'); } catch {}
+    $('#cActions').classList.remove('on');
+    $('#cBody').innerHTML = `<div class="done"><div class="ok">✓</div><h2>Замовлення №${res.id} прийнято!</h2>
+      <p>Сума: <b>${fmt(res.total)}</b><br>Менеджер напише вам в особисті повідомлення найближчим часом.</p></div>
+      <button class="btn ghost" style="width:100%;margin-top:22px" onclick="hide()">Повернутися до каталогу</button>`;
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Замовити';
+  }
+};
+
+// Підказка «Як замовити»: показуємо, доки людина не зробить перше замовлення або не закриє її
+try { if (localStorage.getItem('optvin_howto') === 'hide') $('#howto').remove(); } catch {}
+$('#howtoClose')?.addEventListener('click', () => {
+  $('#howto').remove();
+  try { localStorage.setItem('optvin_howto', 'hide'); } catch {}
+});
+
+load();
+</script>
+</body>
+</html>
