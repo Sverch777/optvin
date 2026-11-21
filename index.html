@@ -721,6 +721,8 @@ $('#prBody').addEventListener('click', (e) => {
 });
 $('#profAva').innerHTML = tgUser ? avaHtml() : '👤';
 if (inTg) loadProfile().catch(() => {});
+// Статистика для власника: людина відкрила каталог
+if (inTg) fetch(API + 'api/visit', { method: 'POST', headers: { 'Content-Type': 'application/json', ...NG }, body: JSON.stringify({ initData: tg.initData }) }).catch(() => {});
 
 // Підказка «Як замовити»: показуємо, доки людина не зробить перше замовлення або не закриє її
 try { if (localStorage.getItem('optvin_howto') === 'hide') $('#howto').remove(); } catch {}
