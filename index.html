@@ -271,12 +271,25 @@ try {
 } catch {}
 if (API && !API.endsWith('/')) API += '/';
 
-/* Фото вантажимо через fetch (із тим самим заголовком), лише коли вони з'являються на екрані */
+/* Фото: звичайні картинки (працює на будь-якому телефоні), зменшені безкоштовним сервісом wsrv.nl —
+   ~15 КБ замість ~1 МБ. Якщо сервіс не відповів — вантажимо оригінал напряму. */
+const thumb = (url, w) =>
+  `https://wsrv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${w}&fit=contain&bg=white&output=webp&q=80`;
 const imgCache = new Map();
 async function loadImg(img) {
-  const src = img.dataset.src;
+  let src = img.dataset.src;
   if (!src) return;
-  const url = /^https?:/.test(src) ? src : API + src.replace(/^\//, '');
+  // /img?u=<пряме посилання> → беремо пряме посилання
+  const m = src.match(/^\/?img\?u=(.+)$/);
+  if (m) { try { src = decodeURIComponent(m[1]); } catch {} }
+  if (/^https?:/.test(src)) {
+    const w = Number(img.dataset.w) || 400;
+    img.onerror = () => { img.onerror = null; img.src = src; };
+    img.src = thumb(src, Math.round(w * Math.min(window.devicePixelRatio || 1, 2)));
+    return;
+  }
+  // старий формат (/img?u=…) — через сервер бота
+  const url = API + src.replace(/^\//, '');
   try {
     let p = imgCache.get(url);
     if (!p) {
@@ -370,7 +383,7 @@ function render() {
   $('#grid').innerHTML = list.map((p, i) => `
     <article class="card" data-id="${p.id}" style="animation-delay:${Math.min(i % PAGE, 12) * 30}ms">
       <div class="ph">
-        <img data-src="${p.images[0] || ''}" alt="">
+        <img data-src="${p.images[0] || ''}" data-w="200" alt="">
         ${!p.inStock ? '<span class="tag out">Під замовлення</span>' : p.isNew ? '<span class="tag">New</span>' : ''}
       </div>
       <div class="info">
@@ -463,7 +476,7 @@ function openProduct(id) {
   }).join('');
   $('#pBody').innerHTML = `
     <div class="gal">
-      <div class="track" id="track">${p.images.map((s) => `<img data-src="${s}" alt="">`).join('')}</div>
+      <div class="track" id="track">${p.images.map((s) => `<img data-src="${s}" data-w="600" alt="">`).join('')}</div>
       ${p.images.length > 1 ? `<div class="dots" id="dots">${p.images.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
     </div>
     <div class="pd">
@@ -508,7 +521,7 @@ function renderCart() {
     <h2>Кошик</h2>
     ${ids.map((id) => { const p = byId(id); return `
       <div class="ci">
-        <img data-src="${p.images[0] || ''}" alt="">
+        <img data-src="${p.images[0] || ''}" data-w="80" alt="">
         <div class="x"><div>${esc(p.title)}</div><b>${fmt(p.price * cart[id])}</b></div>
         <div class="qty"><button data-dec="${id}">−</button><b>${cart[id]}</b><button data-inc="${id}">+</button></div>
       </div>`; }).join('')}
