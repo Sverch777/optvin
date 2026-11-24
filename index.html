@@ -224,6 +224,24 @@ img.avaImg{display:block;width:calc(100% - 6px);height:calc(100% - 6px);border-r
 .emptyP{text-align:center;color:var(--muted);padding:30px 10px}
 .emptyP b{display:block;font-size:36px;margin-bottom:8px}
 
+/* Акція */
+.bf{position:relative;margin:16px 0 4px;padding:18px;border-radius:var(--radius);background:radial-gradient(120% 140% at 100% 0,#4a1f86 0,#17102e 45%,#07060d 100%);color:#fff;overflow:hidden;border:1px solid rgba(177,76,247,.45);box-shadow:0 12px 30px rgba(80,30,140,.35);display:block;width:100%;text-align:left}
+.bf::after{content:"⚡";position:absolute;right:-6px;top:-22px;font-size:120px;opacity:.12;transform:rotate(14deg)}
+.bf .k{font-size:11.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:#ffd84a}
+.bf .h{margin-top:4px;font-size:25px;font-weight:800;letter-spacing:-.6px;line-height:1.1}
+.bf .h em{font-style:normal;color:#ffd84a}
+.bf .s{margin-top:6px;font-size:13px;opacity:.85;line-height:1.4}
+.bf .tm{display:flex;gap:6px;margin-top:12px;position:relative;z-index:1}
+.bf .tm i{font-style:normal;min-width:52px;padding:7px 6px;border-radius:12px;background:rgba(255,255,255,.1);text-align:center;font-size:19px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.bf .tm small{display:block;margin-top:2px;font-size:10px;font-weight:600;opacity:.75}
+.bf .go{margin-top:13px;display:inline-block;padding:10px 16px;border-radius:12px;background:#ffd84a;color:#14101f;font-size:14px;font-weight:800;position:relative;z-index:1}
+.off{position:absolute;top:10px;right:10px;padding:5px 9px;border-radius:9px;font-size:13px;font-weight:800;color:#14101f;background:#ffd84a;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.mini .off{top:8px;right:8px;font-size:12px;padding:4px 7px}
+.oldp{display:block;font-size:12px;font-weight:600;color:var(--dim);text-decoration:line-through;line-height:1.1}
+.pd .pr .oldp{display:inline;font-size:17px}
+.pd .pr .offb{padding:5px 10px;border-radius:10px;background:#ffd84a;color:#14101f;font-size:14px;font-weight:800}
+.saveb{margin-top:10px;display:inline-block;padding:7px 12px;border-radius:12px;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(135deg,#3a1a6e,#17102e);border:1px solid rgba(255,216,74,.5)}
+
 /* Популярне */
 .pop{position:absolute;left:8px;bottom:8px;padding:5px 9px;border-radius:9px;font-size:10.5px;font-weight:800;color:#fff;background:rgba(15,12,30,.78)}
 .pop.hit{background:linear-gradient(135deg,#ff7a18,#ff3d6e)}
@@ -305,7 +323,8 @@ img.avaImg{display:block;width:calc(100% - 6px);height:calc(100% - 6px);border-r
         <span class="badge" id="badge">0</span>
       </button>
     </div>
-    <div class="hero">
+    <div id="bfBox"></div>
+    <div class="hero" id="hero">
       <b>Нові гаджети щотижня ⚡</b>
       <span>Колонки, фени, ліхтарі, годинники та ще сотні товарів за вигідними цінами</span>
       <div class="pills"><i>🚚 Нова Пошта</i><i>🤝 Зустріч у Вінниці</i></div>
@@ -454,8 +473,13 @@ async function load() {
   const c = $('#contact'); c.href = 'https://t.me/' + DATA.manager; c.querySelector('b').textContent = '@' + DATA.manager;
   // прибираємо з кошика товари, яких більше немає
   for (const id of Object.keys(cart)) if (!byId(id)) delete cart[id];
+  if (cat === 'bf' && !DATA.products.some((p) => p.off)) cat = 'all';
+  $('#rail').innerHTML = '';
+  renderPromo();
   renderChips(); render(); updateCart();
   window.__splashReady?.();
+  if (load.done) return;
+  load.done = true;
   const open = new URLSearchParams(location.search).get('p') || tg?.initDataUnsafe?.start_param;
   if (open && byId(open)) openProduct(open);
   else if (new URLSearchParams(location.search).get('view') === 'profile' || DEMO) openProfile();
@@ -465,6 +489,8 @@ function renderChips() {
   const news = DATA.products.filter((p) => p.isNew).length;
   const chips = [{ k: 'all', n: 'Усі', c: DATA.products.length }];
   const pops = DATA.products.filter((p) => p.buyers > 0).length;
+  const offs = DATA.products.filter((p) => p.off).length;
+  if (offs) chips.push({ k: 'bf', n: '🖤 ' + DATA.promo.title, c: offs });
   if (pops) chips.push({ k: 'pop', n: '🔥 Популярне', c: pops });
   if (news) chips.push({ k: 'new', n: '🆕 Новинки', c: news });
   for (const x of DATA.categories) chips.push({ k: x.name, n: x.name, c: x.count });
@@ -480,8 +506,9 @@ $('#chips').addEventListener('click', (e) => {
 function filtered() {
   const q = query.toLowerCase().trim();
   let list = DATA.products.filter((p) =>
-    (cat === 'all' || (cat === 'new' ? p.isNew : cat === 'pop' ? p.buyers > 0 : p.category === cat)) &&
+    (cat === 'all' || (cat === 'new' ? p.isNew : cat === 'pop' ? p.buyers > 0 : cat === 'bf' ? p.off : p.category === cat)) &&
     (!q || (p.title + ' ' + p.category).toLowerCase().includes(q)));
+  if (cat === 'bf' && sort === 'new') list = [...list].sort((a, b) => b.off - a.off || b.buyers - a.buyers);
   if (cat === 'pop' && sort === 'new') list = [...list].sort((a, b) => b.buyers - a.buyers);
   if (sort === 'cheap') list = [...list].sort((a, b) => a.price - b.price);
   if (sort === 'exp') list = [...list].sort((a, b) => b.price - a.price);
@@ -494,13 +521,41 @@ let shown = PAGE;
 const resetPaging = () => { shown = PAGE; };
 // Мітки рахуються лише з наших замовлень: від 3 різних покупців — «Хіт продажів»
 const HIT_FROM = 3;
+const offTag = (p) => p.off ? `<span class="off">−${p.off}%</span>` : '';
+const priceHtml = (p) => p.off ? `<s class="oldp">${fmt(p.old)}</s>${fmt(p.price)}` : fmt(p.price);
+// ---------- Акція: банер і відлік ----------
+let promoTimer;
+function renderPromo() {
+  const pr = DATA.promo, box = $('#bfBox');
+  clearInterval(promoTimer);
+  $('#hero').classList.toggle('hide', !!pr);
+  if (!pr) { box.innerHTML = ''; return; }
+  const on = pr.state === 'on', end = Date.parse(on ? pr.to : pr.from), shift = pr.now - Date.now();
+  box.innerHTML = `<button class="bf" id="bfBtn"><div class="k">${on ? 'Розпродаж уже триває' : 'Скоро старт'}</div>
+    <div class="h">🖤 ${esc(pr.title)} <em>до −${pr.max}%</em></div>
+    <div class="s">${on ? pr.count + ' ' + plural(pr.count, ['товар', 'товари', 'товарів']) + ' зі знижкою. До кінця залишилось:' : '27–29 листопада. До старту залишилось:'}</div>
+    <div class="tm" id="bfTm"></div>${on ? '<span class="go">Дивитися знижки →</span>' : ''}</button>`;
+  const tick = () => {
+    const ms = end - (Date.now() + shift);
+    if (ms <= 0) { clearInterval(promoTimer); setTimeout(load, 17000 + Math.random() * 8000); $('#bfTm').innerHTML = ''; return; }
+    const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), two = (n) => String(n).padStart(2, '0');
+    const parts = [...(d ? [[d, plural(d, ['день', 'дні', 'днів'])]] : []), [two(Math.floor(s / 3600) % 24), 'год'], [two(Math.floor(s / 60) % 60), 'хв'], [two(s % 60), 'сек']];
+    $('#bfTm').innerHTML = parts.map(([n, t]) => `<i>${n}<small>${t}</small></i>`).join('');
+  };
+  promoTimer = setInterval(tick, 1000); tick();
+  $('#bfBtn').onclick = () => {
+    if (!on) return toast('Знижки увімкнуться 27 листопада о 00:00 🖤');
+    cat = 'bf'; haptic('soft'); resetPaging(); renderChips(); render();
+    $('#chips').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+}
 const popTag = (p) => !p.buyers ? '' : p.buyers >= HIT_FROM ? '<span class="pop hit">🔥 Хіт продажів</span>' : '<span class="pop">🛒 Замовляють</span>';
 function renderShelf() {
   const list = DATA.products.filter((p) => p.buyers > 0).sort((a, b) => b.buyers - a.buyers).slice(0, 12);
   const on = cat === 'all' && !query.trim() && list.length >= 3;
   $('#shelf').classList.toggle('hide', !on);
   if (!on || $('#rail').children.length) return;
-  $('#rail').innerHTML = list.map((p) => `<button class="mini" data-id="${p.id}"><div class="ph"><img data-src="${p.images[0] || ''}" data-w="136" alt="">${p.buyers >= HIT_FROM ? popTag(p) : ''}</div><div class="t">${esc(p.title)}</div><div class="p">${fmt(p.price)}</div></button>`).join('');
+  $('#rail').innerHTML = list.map((p) => `<button class="mini" data-id="${p.id}"><div class="ph"><img data-src="${p.images[0] || ''}" data-w="136" alt="">${p.buyers >= HIT_FROM ? popTag(p) : ''}${offTag(p)}</div><div class="t">${esc(p.title)}</div><div class="p">${priceHtml(p)}</div></button>`).join('');
 }
 $('#rail').addEventListener('click', (e) => { const m = e.target.closest('.mini'); if (m) openProduct(m.dataset.id); });
 $('#shelfAll').addEventListener('click', () => { cat = 'pop'; haptic('soft'); resetPaging(); renderChips(); render(); });
@@ -520,12 +575,12 @@ function render() {
       <div class="ph">
         <img data-src="${p.images[0] || ''}" data-w="200" alt="">
         ${!p.inStock ? '<span class="tag out">Під замовлення</span>' : p.isNew ? '<span class="tag">New</span>' : ''}
-        ${popTag(p)}
+        ${popTag(p)}${offTag(p)}
       </div>
       <div class="info">
         <div class="t">${esc(p.title)}</div>
         <div class="row">
-          <span class="price">${fmt(p.price)}</span>
+          <span class="price">${priceHtml(p)}</span>
           <button class="add ${cart[p.id] ? 'in' : ''}" data-add="${p.id}" aria-label="В кошик">${cart[p.id] ? '✓' : plusSvg}</button>
         </div>
       </div>
@@ -618,8 +673,9 @@ function openProduct(id) {
     <div class="pd">
       <div class="cat">${esc(p.category)}</div>
       <h2>${esc(p.title)}</h2>
-      <div class="pr"><span class="price">${fmt(p.price)}</span>
+      <div class="pr"><span class="price">${fmt(p.price)}</span>${p.off ? `<s class="oldp">${fmt(p.old)}</s><span class="offb">−${p.off}%</span>` : ''}
         <span class="stock ${p.inStock ? '' : 'no'}">${p.inStock ? '● В наявності' : '● Під замовлення'}</span></div>
+      ${p.off ? `<div class="saveb">🖤 Ви економите ${fmt(p.old - p.price)}</div>` : ''}
       ${p.buyers >= HIT_FROM ? `<div class="bought">🔥 Хіт продажів · замовили ${p.buyers} ${plural(p.buyers, ['покупець', 'покупці', 'покупців'])}</div>` : p.buyers ? '<div class="bought few">🛒 Цей товар уже замовляють</div>' : ''}
       <div class="perks">
         <div class="perk"><b>🚚 Нова Пошта</b>Відправка по всій Україні</div>
