@@ -222,6 +222,24 @@ input,textarea{font:inherit;color:var(--text)}
 .emptyP{text-align:center;color:var(--muted);padding:30px 10px}
 .emptyP b{display:block;font-size:36px;margin-bottom:8px}
 
+/* Анімація при відкритті */
+#splash{position:fixed;inset:0;top:0;right:0;bottom:0;left:0;z-index:200;display:grid;place-items:center;background:radial-gradient(circle at 50% 42%,#2b2350 0,#0d0b1c 62%);transition:opacity .4s ease,transform .4s ease}
+#splash.out{opacity:0;transform:scale(1.06);pointer-events:none}
+#splash svg{width:min(62vw,270px);height:auto;overflow:visible}
+#splash svg *{transform-box:fill-box;transform-origin:center}
+.sp-ring{stroke-dasharray:1;stroke-dashoffset:1;animation:spDraw .75s cubic-bezier(.6,0,.2,1) forwards}
+.sp-o{opacity:0;animation:spPop .5s .3s cubic-bezier(.3,1.5,.5,1) forwards}
+.sp-v{stroke-dasharray:1 2;stroke-dashoffset:1;opacity:0;animation:spDraw .4s .55s ease-out forwards,spShow .01s .55s forwards}
+.sp-bolt{opacity:0;animation:spBolt .45s .85s ease-out forwards}
+.sp-text{opacity:0;animation:spUp .4s .95s ease-out forwards}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@keyframes spShow{to{opacity:1}}
+@keyframes spPop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+@keyframes spBolt{0%{opacity:0;transform:scale(2.6)}45%{opacity:1;transform:scale(.85)}70%{transform:scale(1.18)}100%{opacity:1;transform:scale(1)}}
+@keyframes spUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+/* У системі вимкнено анімації → нерухомий логотип, лише плавне зникнення */
+@media (prefers-reduced-motion:reduce){#splash svg *{animation:none!important;opacity:1!important;stroke-dashoffset:0!important}#splash.out{transform:none}}
+
 .toast{position:fixed;left:50%;top:16px;z-index:100;transform:translate(-50%,-150%);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:14px;font-weight:700;transition:transform .35s cubic-bezier(.2,.9,.3,1);box-shadow:var(--shadow);max-width:90vw}
 .toast.on{transform:translate(-50%,0)}
 .contact{display:block;text-align:center;margin:22px 0 0;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
@@ -229,6 +247,30 @@ input,textarea{font:inherit;color:var(--text)}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <svg viewBox="0 0 640 640" fill="none">
+    <defs>
+      <linearGradient id="spG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b14cf7"/><stop offset=".5" stop-color="#6a5cf5"/><stop offset="1" stop-color="#2f86f6"/></linearGradient>
+      <linearGradient id="spV" gradientUnits="userSpaceOnUse" x1="354" y1="174" x2="486" y2="354"><stop offset="0" stop-color="#d978ff"/><stop offset=".5" stop-color="#8f7bff"/><stop offset="1" stop-color="#4db2ff"/></linearGradient>
+      <linearGradient id="spY" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff07a"/><stop offset="1" stop-color="#ffb800"/></linearGradient>
+    </defs>
+    <path class="sp-ring" pathLength="1" d="M320 19a301 301 0 1 1 0 602a301 301 0 1 1 0-602" stroke="url(#spG)" stroke-width="30" stroke-linecap="round"/>
+    <circle class="sp-o" cx="235" cy="252" r="76.5" stroke="#fff" stroke-width="45"/>
+    <path class="sp-v" pathLength="1" d="M374 177 L427 327 L480 177" stroke="url(#spV)" stroke-width="47" stroke-linecap="round" stroke-linejoin="round"/>
+    <polygon class="sp-bolt" points="243.6,209.7 210.4,258.7 232.4,258.7 225.4,294.6 259.9,243.6 237.5,243.6" fill="url(#spY)" stroke="url(#spY)" stroke-width="4" stroke-linejoin="round"/>
+    <text class="sp-text" x="320" y="466" fill="#fff" font-family="Manrope,system-ui,sans-serif" font-weight="800" font-size="92" text-anchor="middle">OptVin</text>
+  </svg>
+</div>
+<script>
+/* Заставка: зникає, коли каталог завантажився (не раніше 1,5 с), за дотиком або щонайпізніше через 3 с */
+(function () {
+  var s = document.getElementById('splash'), t0 = Date.now(), gone = false;
+  function hide() { if (gone) return; gone = true; s.className = 'out'; setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 450); }
+  window.__splashReady = function () { setTimeout(hide, Math.max(0, 1500 - (Date.now() - t0))); };
+  s.addEventListener('click', hide);
+  setTimeout(hide, 3000);
+})();
+</script>
 <div class="wrap">
   <header class="top">
     <div class="glow"></div>
@@ -384,6 +426,7 @@ async function load() {
     DATA = await r.json();
   } catch (e) {
     $('#grid').innerHTML = '<div class="empty"><b>📡</b>Не вдалося завантажити каталог.<br>Спробуйте ще раз.</div>';
+    window.__splashReady?.();
     return;
   }
   $('#shopName').textContent = DATA.shop;
@@ -391,6 +434,7 @@ async function load() {
   // прибираємо з кошика товари, яких більше немає
   for (const id of Object.keys(cart)) if (!byId(id)) delete cart[id];
   renderChips(); render(); updateCart();
+  window.__splashReady?.();
   const open = new URLSearchParams(location.search).get('p') || tg?.initDataUnsafe?.start_param;
   if (open && byId(open)) openProduct(open);
   else if (new URLSearchParams(location.search).get('view') === 'profile' || DEMO) openProfile();
