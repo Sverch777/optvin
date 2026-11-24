@@ -557,8 +557,8 @@ $('#pAdd').onclick = () => { addToCart(pId, pQty); hide(); };
 
 /* ---------- Checkout ---------- */
 
-let form = { delivery: 'np', address: '', comment: '' };
-try { form.address = localStorage.getItem('optvin_addr') || ''; } catch {}
+let form = { delivery: 'np', city: '', branch: '', fullname: '', phone: '', comment: '' };
+try { Object.assign(form, JSON.parse(localStorage.getItem('optvin_ship') || '{}')); } catch {}
 const tgUser = tg?.initDataUnsafe?.user || null;
 const userLabel = () => tgUser ? (tgUser.username ? '@' + tgUser.username : [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ')) : 'Гість';
 
@@ -591,15 +591,20 @@ function renderCart() {
         <button data-del="np" class="${form.delivery === 'np' ? 'on' : ''}"><b>🚚 Нова Пошта</b>По всій Україні</button>
         <button data-del="meet" class="${form.delivery === 'meet' ? 'on' : ''}"><b>🤝 Зустріч</b>У Вінниці</button>
       </div>
-      <div class="field ${form.delivery === 'np' ? '' : 'hide'}"><label>Куди відправити</label><textarea id="fAddress" rows="2" placeholder="Місто, відділення, ПІБ, телефон">${esc(form.address)}</textarea></div>
+      <div class="field ${form.delivery === 'np' ? '' : 'hide'}"><label>Місто</label><input id="fCity" maxlength="80" placeholder="Наприклад: Київ" value="${esc(form.city)}" autocomplete="address-level2"></div>
+      <div class="field ${form.delivery === 'np' ? '' : 'hide'}"><label>Відділення або поштомат</label><input id="fBranch" maxlength="80" placeholder="Наприклад: 25" value="${esc(form.branch)}"></div>
+      <div class="field"><label>Прізвище, ім'я, по батькові</label><input id="fFullname" maxlength="100" placeholder="Петренко Олег Іванович" value="${esc(form.fullname)}" autocomplete="name"></div>
+      <div class="field"><label>Телефон</label><input id="fPhone" type="tel" maxlength="20" placeholder="067 123 45 67" value="${esc(form.phone)}" autocomplete="tel"></div>
       <div class="field"><label>Коментар</label><textarea id="fComment" rows="2" placeholder="Колір, побажання…">${esc(form.comment)}</textarea></div>
       <div class="perk" style="margin-top:4px"><b>💬 Як це працює</b>Натисніть «Замовити» — менеджер напише вам в особисті повідомлення, щоб узгодити деталі та оплату.</div>
     </div>`;
 }
 const readForm = () => {
-  const c = $('#fComment'), a = $('#fAddress');
-  if (c) form.comment = c.value.trim();
-  if (a) { form.address = a.value.trim(); try { localStorage.setItem('optvin_addr', form.address); } catch {} }
+  for (const [k, id] of [['comment', '#fComment'], ['city', '#fCity'], ['branch', '#fBranch'], ['fullname', '#fFullname'], ['phone', '#fPhone']]) {
+    const el = $(id); if (el) form[k] = el.value.trim();
+  }
+  // лише на телефоні самого покупця, щоб не вводити вдруге
+  try { const { delivery, city, branch, fullname, phone } = form; localStorage.setItem('optvin_ship', JSON.stringify({ delivery, city, branch, fullname, phone })); } catch {}
 };
 $('#cBody').addEventListener('click', (e) => {
   const inc = e.target.closest('[data-inc]'), dec = e.target.closest('[data-dec]'), del = e.target.closest('[data-del]');
@@ -623,7 +628,7 @@ $('#cSubmit').onclick = async () => {
       body: JSON.stringify({
         initData: tg.initData,
         items: Object.keys(cart).map((id) => ({ id, qty: cart[id] })),
-        delivery: form.delivery === 'np' ? ('Нова Пошта' + (form.address ? ': ' + form.address : ' (адресу не вказано)')) : 'Зустріч у Вінниці',
+        ship: { method: form.delivery, city: form.city, branch: form.branch, fullname: form.fullname, phone: form.phone },
         comment: form.comment,
       }),
     });
