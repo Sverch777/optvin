@@ -237,6 +237,9 @@ img.avaImg{display:block;width:calc(100% - 6px);height:calc(100% - 6px);border-r
 .oc ul{margin:12px 0 0;padding:0;list-style:none;font-size:13px;color:var(--muted);line-height:1.5}
 .oc ul li{display:flex;justify-content:space-between;gap:10px}
 .oc ul li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc ul li.lnk{cursor:pointer;padding:3px 0}
+.oc ul li.lnk span:first-child{color:var(--text);text-decoration:underline;text-decoration-color:rgba(139,92,246,.6);text-underline-offset:3px}
+.oc ul li.lnk span:last-child{flex:none;color:var(--accent);font-weight:700}
 .oc .sum2{display:flex;justify-content:space-between;margin-top:10px;font-weight:800}
 .steps{display:flex;margin:16px 0 4px;position:relative}
 .step{flex:1;text-align:center;position:relative;font-size:10px;font-weight:700;color:var(--dim);line-height:1.25}
@@ -932,10 +935,12 @@ async function loadProfile() {
 }
 
 function orderCard(o) {
-  const all = PROF.statuses;
+  const all = o.steps || PROF.statuses; // для зустрічі у Вінниці — свої етапи
   const idx = all.findIndex((s) => s.key === o.status);
   const st = o.status === 'cancelled' ? PROF.cancelled : all[Math.max(0, idx)];
-  const items = o.items.slice(0, 3).map((i) => `<li><span>${esc(i.title)}</span><span>×${i.qty}</span></li>`).join('') +
+  const items = o.items.slice(0, 3).map((i) => byId(String(i.id))
+    ? `<li class="lnk" data-pid="${esc(String(i.id))}"><span>${esc(i.title)}</span><span>×${i.qty} ›</span></li>`
+    : `<li><span>${esc(i.title)}</span><span>×${i.qty}</span></li>`).join('') +
     (o.items.length > 3 ? `<li><span>…і ще ${o.items.length - 3}</span><span></span></li>` : '');
   const steps = o.status === 'cancelled' ? '' : `<div class="steps">${all.map((s, k) =>
     `<div class="step ${k < idx ? 'past' : k === idx ? 'now' : ''}"><i>${k < idx ? '✓' : s.icon}</i>${esc(s.title)}</div>`).join('')}</div>`;
@@ -981,7 +986,10 @@ $('#prBody').addEventListener('click', (e) => {
   const t = e.target.closest('[data-pt]');
   if (t) { profTab = t.dataset.pt; haptic('soft'); renderProfile(); return; }
   const a = e.target.closest('a[data-ext]');
-  if (a && tg?.openLink) { e.preventDefault(); tg.openLink(a.href); }
+  if (a && tg?.openLink) { e.preventDefault(); tg.openLink(a.href); return; }
+  // Натиснули на товар у замовленні — відкриваємо його картку в каталозі
+  const it = e.target.closest('[data-pid]');
+  if (it && byId(it.dataset.pid)) { haptic('soft'); hide(); setTimeout(() => openProduct(it.dataset.pid), 250); }
 });
 $('#profAva').innerHTML = tgUser ? avaHtml() : '👤';
 if (inTg) loadProfile().catch(() => {});
