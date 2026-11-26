@@ -111,13 +111,16 @@ input,textarea{font:inherit;color:var(--text)}
 .cl{padding:0 16px}
 .cl h2{margin:2px 4px 8px;font-size:23px;font-weight:800;letter-spacing:-.4px}
 .crow{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:16px;font-weight:700}
-.crow .ci{flex:none;width:42px;height:42px;border-radius:13px;background:var(--card2);display:grid;place-items:center;font-size:21px}
+.crow .cic{flex:none;width:42px;height:42px;border-radius:13px;background:var(--card2);display:grid;place-items:center;font-size:21px;line-height:1}
+/* значки-картинки: на Windows звичайні емодзі малюються зі зсувом, картинка стоїть рівно скрізь */
+.emo{display:block;width:24px;height:24px}
+.cur .cn .emo{width:20px;height:20px;flex:none}
 .crow .tn{flex:1;min-width:0}
 .crow .cc{color:var(--muted);font-size:14px;font-weight:600}
 .crow .ca{color:var(--dim);font-size:24px;line-height:1;margin-left:2px}
 .crow.on{color:var(--accent)}
-.crow.on .ci{background:var(--accent);color:#fff}
-.crow.bfr .ci{background:#1d1626;box-shadow:inset 0 0 0 1.5px #ffd21f}
+.crow.on .cic{background:var(--accent);color:#fff}
+.crow.bfr .cic{background:#1d1626;box-shadow:inset 0 0 0 1.5px #ffd21f}
 .crow.bfr .cc{color:#e0a800;font-weight:800}
 .cl .sep{height:10px}
 
@@ -134,6 +137,9 @@ input,textarea{font:inherit;color:var(--text)}
 .gal .track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 .gal .track::-webkit-scrollbar{display:none}
 .gal img{flex:none;width:100%;aspect-ratio:1;object-fit:contain;scroll-snap-align:center}
+.garr{position:absolute;top:50%;z-index:2;width:42px;height:42px;margin-top:-21px;border-radius:50%;background:rgba(20,20,35,.55);color:#fff;font-size:30px;line-height:1;display:grid;place-items:center;padding-bottom:4px;box-shadow:0 4px 14px rgba(0,0,0,.25);backdrop-filter:blur(4px);transition:opacity .2s}
+.garr.prev{left:10px}.garr.next{right:10px}
+.garr.off{opacity:0;pointer-events:none}
 .dots{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px}
 .dots i{width:6px;height:6px;border-radius:3px;background:rgba(0,0,0,.2);transition:all .25s}
 .dots i.on{width:18px;background:#6366f1}
@@ -298,8 +304,14 @@ img.avaImg{display:block;width:calc(100% - 6px);height:calc(100% - 6px);border-r
 @keyframes spPop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
 @keyframes spBolt{0%{opacity:0;transform:scale(2.6)}45%{opacity:1;transform:scale(.85)}70%{transform:scale(1.18)}100%{opacity:1;transform:scale(1)}}
 @keyframes spUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
-/* У системі вимкнено анімації → нерухомий логотип, лише плавне зникнення */
-@media (prefers-reduced-motion:reduce){#splash svg *{animation:none!important;opacity:1!important;stroke-dashoffset:0!important}#splash.out{transform:none}}
+/* У системі вимкнено анімації (часто так на Windows) → та сама заставка, але м'якша:
+   кільце й «V» малюються, решта плавно з'являється без стрибків і збільшень */
+@media (prefers-reduced-motion:reduce){
+  .sp-o{animation:spShow .45s .3s ease-out forwards}
+  .sp-bolt{animation:spShow .4s .85s ease-out forwards}
+  .sp-text{animation:spShow .4s .95s ease-out forwards}
+  #splash.out{transform:none}
+}
 
 .toast{position:fixed;left:50%;top:16px;z-index:100;transform:translate(-50%,-150%);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:14px;font-weight:700;transition:transform .35s cubic-bezier(.2,.9,.3,1);box-shadow:var(--shadow);max-width:90vw}
 .toast.on{transform:translate(-50%,0)}
@@ -544,6 +556,12 @@ const CAT_ICON = {
   'Smart годинники і фітнес браслети': '📲', 'Система виклику офіціанта': '🛎', 'Багатофункціональні Smart пристрої': '💡',
   'Розпродаж': '🏷', 'Запальнички': '🔥', 'Вішалки та стійки для одягу та взуття': '🧥', 'Термометри': '🌡',
 };
+// Емодзі → картинка Twemoji; якщо картинка не завантажилась — показуємо звичайний емодзі
+const EMO_CDN = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/';
+function emo(e) {
+  const cp = [...e].map((c) => c.codePointAt(0).toString(16)).filter((c) => c !== 'fe0f').join('-');
+  return `<img class="emo" src="${EMO_CDN}${cp}.svg" alt="${e}" draggable="false" onerror="this.replaceWith(this.alt)">`;
+}
 function catList() {
   const L = [{ k: 'all', n: 'Усі товари', i: '🏪', c: DATA.products.length }];
   const offs = DATA.products.filter((p) => p.off).length;
@@ -560,9 +578,9 @@ function renderChips() {
   const L = catList(), cur = L.find((x) => x.k === cat);
   // під пошуком — що зараз вибрано (і як повернутись до всіх товарів)
   $('#chips').innerHTML = !cur || cat === 'all' ? '' :
-    `<button class="cn" data-open><b>${cur.i}</b><span>${esc(cur.n)}</span><small>${cur.c}</small></button><button class="cx" data-k="all">✕ Усі</button>`;
+    `<button class="cn" data-open>${emo(cur.i)}<span>${esc(cur.n)}</span><small>${cur.c}</small></button><button class="cx" data-k="all">✕ Усі</button>`;
   $('#catList').innerHTML = L.map((x) => x.sep ? '<div class="sep"></div>' :
-    `<button class="crow ${x.k === cat ? 'on' : ''} ${x.cls || ''}" data-k="${esc(x.k)}"><span class="ci">${x.i}</span><span class="tn">${esc(x.n)}</span><span class="cc">${x.c}</span><span class="ca">›</span></button>`).join('');
+    `<button class="crow ${x.k === cat ? 'on' : ''} ${x.cls || ''}" data-k="${esc(x.k)}"><span class="cic">${emo(x.i)}</span><span class="tn">${esc(x.n)}</span><span class="cc">${x.c}</span><span class="ca">›</span></button>`).join('');
 }
 // прокрутити до товарів (під шапку)
 function toGoods() {
@@ -765,11 +783,30 @@ function openProduct(id) {
       </div>
       ${specs ? `<div class="specs"><h3>Характеристики</h3>${specs}</div>` : ''}
     </div>`;
-  const track = $('#track'), dots = $('#dots');
-  if (dots) track.addEventListener('scroll', () => {
-    const i = Math.round(track.scrollLeft / track.clientWidth);
-    dots.querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === i));
-  }, { passive: true });
+  const track = $('#track'), dots = $('#dots'), n = p.images.length;
+  if (n > 1) {
+    // Стрілки ‹ › — щоб гортати фото й на комп'ютері, де немає свайпу
+    track.insertAdjacentHTML('afterend', '<button class="garr prev" aria-label="Попереднє фото">‹</button><button class="garr next" aria-label="Наступне фото">›</button>');
+    const prev = $('#pBody .garr.prev'), next = $('#pBody .garr.next');
+    const cur = () => Math.round(track.scrollLeft / track.clientWidth);
+    let target = null; // куди гортаємо стрілкою (поки йде плавна прокрутка)
+    const go = (d) => {
+      haptic('soft');
+      target = Math.max(0, Math.min(n - 1, (target ?? cur()) + d));
+      track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
+      sync();
+      clearTimeout(go.t); go.t = setTimeout(() => { target = null; sync(); }, 700);
+    };
+    prev.onclick = (e) => { e.stopPropagation(); go(-1); };
+    next.onclick = (e) => { e.stopPropagation(); go(1); };
+    const sync = () => {
+      const i = target ?? cur();
+      dots?.querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === i));
+      prev.classList.toggle('off', i <= 0); next.classList.toggle('off', i >= n - 1);
+    };
+    track.addEventListener('scroll', sync, { passive: true });
+    sync();
+  }
   show($('#pSheet'), $('#pActions'));
 }
 $('#pMinus').onclick = () => { pQty = Math.max(1, pQty - 1); $('#pQty').textContent = pQty; haptic('soft'); };
