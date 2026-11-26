@@ -97,6 +97,30 @@ input,textarea{font:inherit;color:var(--text)}
 .bar button span{display:flex;align-items:center;gap:10px}
 .bar .cnt{background:rgba(255,255,255,.22);border-radius:9px;padding:3px 9px;font-size:13px}
 
+/* Кнопка «Каталог» і список категорій */
+.srow{display:flex;gap:8px}
+.srow .search{flex:1;min-width:0}
+.catBtn{flex:none;height:48px;padding:0 16px;border-radius:16px;background:var(--grad);color:#fff;font-weight:800;font-size:15.5px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(139,92,246,.4)}
+.catBtn svg{flex:none}
+.cur{display:flex;align-items:center;gap:8px;margin-top:10px}
+.cur:empty{display:none}
+.cur .cn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:42px;padding:0 14px;border-radius:13px;background:var(--card);border:1.5px solid var(--accent);font-weight:800;font-size:14.5px;text-align:left}
+.cur .cn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cur .cn small{margin-left:auto;color:var(--muted);font-weight:700}
+.cur .cx{flex:none;height:42px;padding:0 13px;border-radius:13px;background:var(--card2);font-size:13.5px;font-weight:800;color:var(--muted)}
+.cl{padding:0 16px}
+.cl h2{margin:2px 4px 8px;font-size:23px;font-weight:800;letter-spacing:-.4px}
+.crow{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:16px;font-weight:700}
+.crow .ci{flex:none;width:42px;height:42px;border-radius:13px;background:var(--card2);display:grid;place-items:center;font-size:21px}
+.crow .tn{flex:1;min-width:0}
+.crow .cc{color:var(--muted);font-size:14px;font-weight:600}
+.crow .ca{color:var(--dim);font-size:24px;line-height:1;margin-left:2px}
+.crow.on{color:var(--accent)}
+.crow.on .ci{background:var(--accent);color:#fff}
+.crow.bfr .ci{background:#1d1626;box-shadow:inset 0 0 0 1.5px #ffd21f}
+.crow.bfr .cc{color:#e0a800;font-weight:800}
+.cl .sep{height:10px}
+
 /* Sheets */
 .scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .3s}
 .scrim.on{opacity:1;pointer-events:auto}
@@ -342,11 +366,14 @@ img.avaImg{display:block;width:calc(100% - 6px);height:calc(100% - 6px);border-r
   </header>
 
   <div class="sticky">
+    <div class="srow">
+    <button class="catBtn" id="catBtn" aria-label="Каталог"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Каталог</button>
     <div class="search">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:var(--dim)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Пошук: колонка, фен, ліхтар…" autocomplete="off">
+      <input id="q" type="search" placeholder="Пошук товару…" autocomplete="off">
     </div>
-    <div class="chips" id="chips"></div>
+    </div>
+    <div class="cur" id="chips"></div>
   </div>
 
   <section class="shelf hide" id="shelf"><div class="sh"><b>🔥 Популярне</b><button id="shelfAll">Усі →</button></div><div class="rail" id="rail"></div></section>
@@ -384,6 +411,12 @@ img.avaImg{display:block;width:calc(100% - 6px);height:calc(100% - 6px);border-r
   <div class="ch" id="cBody"></div>
 </section>
 <div class="actions" id="cActions"><button class="btn" id="cSubmit">Замовити</button></div>
+
+<section class="sheet" id="catSheet">
+  <div class="grab"><i></i></div>
+  <button class="close" data-close>✕</button>
+  <div class="cl"><h2>Каталог</h2><div id="catList"></div></div>
+</section>
 
 <div class="toast" id="toast"></div>
 
@@ -485,22 +518,49 @@ async function load() {
   else if (new URLSearchParams(location.search).get('view') === 'profile' || DEMO) openProfile();
 }
 
-function renderChips() {
-  const news = DATA.products.filter((p) => p.isNew).length;
-  const chips = [{ k: 'all', n: 'Усі', c: DATA.products.length }];
-  const pops = DATA.products.filter((p) => p.buyers > 0).length;
+const CAT_ICON = {
+  'Техніка для особистого догляду': '💈', 'Ліхтарі': '🔦', 'Наручні годинники': '⌚', 'Велотовари': '🚲',
+  'Bluetooth-колонки, радіо': '🔊', 'Туризм': '🏕', 'Подарункові ручки': '🖊', 'Відеоспостереження': '📹',
+  'Дитячі фотоапарати': '📷', 'Акумулятори': '🔋', 'Зарядні пристрої': '🔌', 'Тестери': '🔧',
+  'Годинники електронні': '⏰', 'Ваги': '⚖️', 'Авто електроніка': '🚗', 'Калькулятори': '🧮',
+  'Smart годинники і фітнес браслети': '📲', 'Система виклику офіціанта': '🛎', 'Багатофункціональні Smart пристрої': '💡',
+  'Розпродаж': '🏷', 'Запальнички': '🔥', 'Вішалки та стійки для одягу та взуття': '🧥', 'Термометри': '🌡',
+};
+function catList() {
+  const L = [{ k: 'all', n: 'Усі товари', i: '🏪', c: DATA.products.length }];
   const offs = DATA.products.filter((p) => p.off).length;
-  if (offs) chips.push({ k: 'bf', n: '🖤 ' + DATA.promo.title, c: offs });
-  if (pops) chips.push({ k: 'pop', n: '🔥 Популярне', c: pops });
-  if (news) chips.push({ k: 'new', n: '🆕 Новинки', c: news });
-  for (const x of DATA.categories) chips.push({ k: x.name, n: x.name, c: x.count });
-  $('#chips').innerHTML = chips.map((x) =>
-    `<button class="chip ${x.k === cat ? 'on' : ''}" data-k="${esc(x.k)}">${esc(x.n)}<small>${x.c}</small></button>`).join('');
+  const pops = DATA.products.filter((p) => p.buyers > 0).length;
+  const news = DATA.products.filter((p) => p.isNew).length;
+  if (offs) L.push({ k: 'bf', n: DATA.promo.title, i: '🖤', c: offs, cls: 'bfr' });
+  if (pops) L.push({ k: 'pop', n: 'Хіти продажу', i: '🔥', c: pops });
+  if (news) L.push({ k: 'new', n: 'Новинки', i: '🆕', c: news });
+  L.push({ sep: true });
+  for (const x of DATA.categories) L.push({ k: x.name, n: x.name, i: CAT_ICON[x.name] || '📦', c: x.count });
+  return L;
 }
+function renderChips() {
+  const L = catList(), cur = L.find((x) => x.k === cat);
+  // під пошуком — що зараз вибрано (і як повернутись до всіх товарів)
+  $('#chips').innerHTML = !cur || cat === 'all' ? '' :
+    `<button class="cn" data-open><b>${cur.i}</b><span>${esc(cur.n)}</span><small>${cur.c}</small></button><button class="cx" data-k="all">✕ Усі</button>`;
+  $('#catList').innerHTML = L.map((x) => x.sep ? '<div class="sep"></div>' :
+    `<button class="crow ${x.k === cat ? 'on' : ''} ${x.cls || ''}" data-k="${esc(x.k)}"><span class="ci">${x.i}</span><span class="tn">${esc(x.n)}</span><span class="cc">${x.c}</span><span class="ca">›</span></button>`).join('');
+}
+// прокрутити до товарів (під шапку)
+function toGoods() {
+  const h = $('header.top');
+  window.scrollTo({ top: h.offsetTop + h.offsetHeight, behavior: 'smooth' });
+}
+function pickCat(k) { cat = k; haptic('soft'); resetPaging(); renderChips(); render(); }
+function openCats() { haptic('soft'); show($('#catSheet')); }
+$('#catBtn').addEventListener('click', openCats);
 $('#chips').addEventListener('click', (e) => {
-  const b = e.target.closest('.chip'); if (!b) return;
-  cat = b.dataset.k; haptic('soft'); resetPaging(); renderChips(); render();
-  b.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  if (e.target.closest('[data-open]')) return openCats();
+  const b = e.target.closest('[data-k]'); if (b) { pickCat(b.dataset.k); toGoods(); }
+});
+$('#catList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-k]'); if (!b) return;
+  pickCat(b.dataset.k); hide(); toGoods();
 });
 
 function filtered() {
@@ -545,8 +605,7 @@ function renderPromo() {
   promoTimer = setInterval(tick, 1000); tick();
   $('#bfBtn').onclick = () => {
     if (!on) return toast('Знижки увімкнуться 27 листопада о 00:00 🖤');
-    cat = 'bf'; haptic('soft'); resetPaging(); renderChips(); render();
-    $('#chips').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    pickCat('bf'); toGoods();
   };
 }
 const popTag = (p) => !p.buyers ? '' : p.buyers >= HIT_FROM ? '<span class="pop hit">🔥 Хіт продажів</span>' : '<span class="pop">🛒 Замовляють</span>';
@@ -596,7 +655,12 @@ $('#grid').addEventListener('click', (e) => {
 });
 
 let qTimer;
-$('#q').addEventListener('input', (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value; resetPaging(); render(); }, 150); });
+$('#q').addEventListener('input', (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => {
+  query = e.target.value;
+  // шукаємо по всьому магазину, а не лише у вибраній категорії
+  if (query.trim() && cat !== 'all') { cat = 'all'; renderChips(); }
+  resetPaging(); render();
+}, 150); });
 // Доходимо до низу списку — показуємо ще порцію
 new IntersectionObserver((es) => { if (es[0].isIntersecting && !$('#more').classList.contains('hide')) { shown += PAGE; render(); } }, { rootMargin: '600px' }).observe($('#more'));
 $('#more').addEventListener('click', () => { shown += PAGE; render(); });
