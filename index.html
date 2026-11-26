@@ -432,11 +432,18 @@ const haptic = (t = 'light') => { try { tg?.HapticFeedback?.impactOccurred(t); }
    Сторінка може лежати на GitHub Pages, а товари/фото/замовлення — на комп'ютері з ботом.
    Адресу сервера бот передає в посиланні: ?api=https://… */
 const NG = { 'ngrok-skip-browser-warning': '1' }; // щоб ngrok не показував сторінку-попередження
+// Постійна адреса сервера. Старі кнопки в чатах могли вести на тимчасові тунелі,
+// які вже не працюють (ngrok, trycloudflare) — для них беремо цю адресу.
+const MAIN_API = 'https://138-2-128-13.sslip.io/';
+const DEAD_API = /ngrok|trycloudflare\.com|loca\.lt|localhost\.run|serveo|lhr\.life|^https?:\/\/(localhost|127\.)/i;
 let API = new URLSearchParams(location.search).get('api') || '';
+if (DEAD_API.test(API)) API = '';
 try {
   if (API) localStorage.setItem('optvin_api', API);
   else if (location.hostname.endsWith('github.io')) API = localStorage.getItem('optvin_api') || '';
 } catch {}
+if (DEAD_API.test(API)) API = '';
+if (!API && location.hostname.endsWith('github.io')) API = MAIN_API;
 if (API && !API.endsWith('/')) API += '/';
 
 /* Фото: звичайні картинки (працює на будь-якому телефоні), зменшені безкоштовним сервісом wsrv.nl —
@@ -495,7 +502,18 @@ function toast(msg) {
 
 async function load() {
   try {
-    const r = await fetch(API + 'api/products', { headers: NG });
+    let r;
+    try {
+      r = await fetch(API + 'api/products', { headers: NG });
+      if (!r.ok) throw new Error(r.status);
+    } catch (e) {
+      // стара або непрацююча адреса — пробуємо основний сервер
+      if (API === MAIN_API || !location.hostname.endsWith('github.io')) throw e;
+      API = MAIN_API;
+      try { localStorage.setItem('optvin_api', API); } catch {}
+      r = await fetch(API + 'api/products', { headers: NG });
+      if (inTg) loadProfile().catch(() => {});
+    }
     DATA = await r.json();
   } catch (e) {
     $('#grid').innerHTML = '<div class="empty"><b>📡</b>Не вдалося завантажити каталог.<br>Спробуйте ще раз.</div>';
